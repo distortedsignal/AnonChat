@@ -24,3 +24,4 @@ def new_messages(username, other_username):
 
 if __name__ == "__main__":
     app.run()
+    
