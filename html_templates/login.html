@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+    <!-- This is the most minimal HTML that I could come up with.
+            If this was supposed to be a product, I would do A LOT of things
+            different from how we're doing them here. -->
+    <head>
+        <script>
+            function goToUser() {
+                username = document.getElementById("username").value;
+                window.location.href = window.location.href + '/' + username;
+            }
+        </script>
+    </head>
+    <body>
+        <div id="login-box" style="text-align:center">
+            <p>Login As:</p>
+            <input type="text" name="username" id="username"><br><br>
+            <button type="button" onclick="goToUser()">Submit</button>
+        </div>
+    </body>
+</html>
