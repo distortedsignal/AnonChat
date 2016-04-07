@@ -1,9 +1,10 @@
-from Flask import Flask
+from flask import Flask
 app = Flask(__name__)
 
 @app.route("/")
 def main_page():
     # Return a static HTML page
+    return front_page
     pass
 
 @app.route("/<username>")
@@ -23,5 +24,5 @@ def new_messages(username, other_username):
     pass
 
 if __name__ == "__main__":
+    front_page = open('html_templates\\login.html').read()
     app.run()
-    
