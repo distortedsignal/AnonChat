@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script>
+            function goToUser() {
+                username = document.getElementById("username").value;
+                window.location.href = window.location.href + '/with/' + username;
+            }
+        </script>
+    </head>
+    <body>
+        <div id="login-box" style="text-align:center">
+            <p>Chat with:</p>
+            <input type="text" name="username" id="username"><br><br>
+            <button type="button" onclick="goToUser()">Chat</button><br><br>
+
+            {{chat_partners}}
+        </div>
+    </body>
+</html>
