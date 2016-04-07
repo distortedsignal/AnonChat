@@ -43,7 +43,7 @@ def get_user_id(username, connection):
 
 def get_partners_list(user_id, connection):
     cursor = connection.cursor()
-    cursor.execute('select a.username from users where id in (select second_id from a.user_connections where id = %s)', (user_id,))
+    cursor.execute('select username from a.users where id in (select second_id from a.user_connections where id = %s)', (user_id,))
     records = cursor.fetchall()
     cursor.close()
     return records
