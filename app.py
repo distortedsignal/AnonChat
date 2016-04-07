@@ -5,7 +5,7 @@ import psycopg2
 app = Flask(__name__)
 
 def get_db_connections():
-    conn_string_template = "host='HOST_NAME' db_name='DATABASE_NAME' user='USERNAME' password='PASSWORD'"
+    conn_string_template = "host='HOST_NAME' dbname='DATABASE_NAME' user='USERNAME' password='PASSWORD'"
     # Assume the database is on the same machine as the server, assume the database name is "AnonChat_db"
     conn_string_template = conn_string_template.replace('HOST_NAME', 'localhost').replace('DATABASE_NAME', 'AnonChat_db')
     connection_map = {}
@@ -29,13 +29,13 @@ def get_db_connections():
 def get_user_id(username, connection):
     # TODO
     cursor = connection.cursor()
-    cursor.execute('Select id from users where username = %s', (username,))
+    cursor.execute('Select id from a.users where username = %s', (username,))
     records = cursor.fetchall()
     # This may introduce a race condition, but I'm not sure.
     if records == None:
         # This user is new
-        cursor.execute('Insert into users (username) VALUES (%s)', (username,))
-        cursor.execute('Select id from users where username = %s', (username,))
+        cursor.execute('Insert into a.users (username) VALUES (%s)', (username,))
+        cursor.execute('Select id from a.users where username = %s', (username,))
         records = cursor.fetchall()
     # The records method is guaranteed to have at least one id in it now.
     cursor.close()
@@ -43,7 +43,7 @@ def get_user_id(username, connection):
 
 def get_partners_list(user_id, connection):
     cursor = connection.cursor()
-    cursor.execute('select username from users where id in (select second_id from user_connections where id = %s)', (user_id,))
+    cursor.execute('select a.username from users where id in (select second_id from a.user_connections where id = %s)', (user_id,))
     records = cursor.fetchall()
     cursor.close()
     return records
