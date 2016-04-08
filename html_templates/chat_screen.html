@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script>
+            function sendChat() {
+                var xhttp = new XMLHttpRequest();
+                xhttp.open("POST", window.location.href + "new", true);
+                xhttp.send(document.getElementById("new_chat").value);
+            }
+
+            function getChat() {
+                var xhttp = new XMLHttpRequest();
+                xhttp.open("GET", window.location.href + chat, false);
+                xhttp.send();
+            }
+        </script>
+    </head>
+    <body>
+        <div id="chat-box" style="text-align:center">
+            <p>Say something:</p>
+            <input type="text" name="new_chat" id="new_chat">
+            <button type="button" onclick="sendChat()">Send</button>
+        </div>
+    </body>
+</html>
