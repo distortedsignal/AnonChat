@@ -1,33 +1,34 @@
 from flask import Flask
 
+import traceback
 import psycopg2
+import sys
 
 app = Flask(__name__)
 
 def get_db_connections():
-    conn_string_template = "host='HOST_NAME' dbname='DATABASE_NAME' user='USERNAME' password='PASSWORD'"
-    # Assume the database is on the same machine as the server, assume the database name is "AnonChat_db"
-    conn_string_template = conn_string_template.replace('HOST_NAME', 'localhost').replace('DATABASE_NAME', 'AnonChat_db')
-    connection_map = {}
-
-    # Why do we need four connections? So that we can harshly limit the
+    # Why do we need so many connections? So that we can harshly limit the
     # permissions of each connection. For example, chat partners should only
     # be able to access the table that relates usernames and ids, and the table
     # of which user ids have had conversations. It should be able to modify both
     # of these tables. If I was really paranoid, I would want to make a 
     # connection that was exclusively allowed to add users.
-    connection_map['chat_partners'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'chat_partners').replace('PASSWORD', 'chat_partners_password'))
     # The chat history should be the only connection that is able to read a
     # conversation from the database.
-    connection_map['get_history'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'get_history').replace('PASSWORD', 'get_history_password'))
     # The post message connection should be the only connection to write to the
     # conversations table
+    conn_string_template = "host='HOST_NAME' dbname='DATABASE_NAME' user='USERNAME' password='PASSWORD'"
+    # Assume the database is on the same machine as the server, assume the 
+    # database name is "AnonChat_db"
+    conn_string_template = conn_string_template.replace('HOST_NAME', 'localhost').replace('DATABASE_NAME', 'AnonChat_db')
+    connection_map = {}
+    connection_map['chat_partners'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'chat_partners').replace('PASSWORD', 'chat_partners_password'))
+    connection_map['get_history'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'get_history').replace('PASSWORD', 'get_history_password'))
     connection_map['post_message'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'post_message').replace('PASSWORD', 'post_message_password'))
 
     return connection_map
 
 def get_user_id(username, connection):
-    # TODO
     cursor = connection.cursor()
     cursor.execute('Select id from a.users where username = %s', (username,))
     records = cursor.fetchall()
@@ -83,8 +84,11 @@ def user_page(username):
     # run any password given against an excellent password hashing function 
     # with a generous work factor (naturally, I would include a large, random 
     # salt in the database on a per-user basis)
-    chat_partners = get_chat_partners(username)
-    return render_user_page(flask.request, chat_partners)
+    try:
+        chat_partners = get_chat_partners(username)
+        return render_user_page(flask.request, chat_partners)
+    except:
+        traceback.print_exc(file=sys.stdout)
 
 @app.route("/<username>/with/<other_username>")
 def text_page(username, other_username):
