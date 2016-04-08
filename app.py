@@ -18,27 +18,39 @@ def get_db_connections():
     # conversation from the database.
     # The post message connection should be the only connection to write to the
     # conversations table
-    conn_string_template = "host='HOST_NAME' dbname='DATABASE_NAME' user='USERNAME' password='PASSWORD'"
+    conn_string_template = "host='HOST_NAME' dbname='DATABASE_NAME' \
+    user='USERNAME' password='PASSWORD'"
     # Assume the database is on the same machine as the server, assume the 
     # database name is "AnonChat_db"
-    conn_string_template = conn_string_template.replace('HOST_NAME', 'localhost').replace('DATABASE_NAME', 'AnonChat_db')
+    conn_string_template = conn_string_template.replace('HOST_NAME', 
+        'localhost').replace('DATABASE_NAME', 'AnonChat_db')
     connection_map = {}
-    connection_map['chat_partners'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'chat_partners').replace('PASSWORD', 'chat_partners_password'))
-    connection_map['get_history'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'get_history').replace('PASSWORD', 'get_history_password'))
-    connection_map['post_message'] = psycopg2.connect(conn_string_template.replace('USERNAME', 'post_message').replace('PASSWORD', 'post_message_password'))
+    connection_map['chat_partners'] = psycopg2.connect(
+        conn_string_template.replace('USERNAME', 'chat_partners').replace(
+            'PASSWORD', 'chat_partners_password'))
+    connection_map['get_history'] = psycopg2.connect(
+        conn_string_template.replace('USERNAME', 'get_history').replace(
+            'PASSWORD', 'get_history_password'))
+    connection_map['post_message'] = psycopg2.connect(
+        conn_string_template.replace('USERNAME', 'post_message').replace(
+            'PASSWORD', 'post_message_password'))
 
     return connection_map
 
 def get_user_id(username, connection):
     cursor = connection.cursor()
-    cursor.execute('Select id from public.users where username = %s', (username,))
+    cursor.execute('Select id from public.users where username = %s',
+        (username,))
     records = cursor.fetchall()
     # This may introduce a race condition, but I'm not sure.
     if not records:
         # This user is new
         print("Adding user '" + username + "'")
-        cursor.execute('Insert into public.users (username) VALUES (%s)', (username,))
-        cursor.execute('Select id from public.users where username = %s', (username,))
+        cursor.execute('Insert into public.users (username) VALUES (%s)',
+            (username,))
+        connection.commit()
+        cursor.execute('Select id from public.users where username = %s',
+            (username,))
         records = cursor.fetchall()
     # The records method is guaranteed to have at least one id in it now.
     cursor.close()
@@ -46,14 +58,15 @@ def get_user_id(username, connection):
 
 def get_partners_list(user_id, connection):
     cursor = connection.cursor()
-    cursor.execute('select username from public.users where id in (select second_id from public.user_connections where id = %s)', (user_id,))
+    cursor.execute('select username from public.users where id in (select \
+        second_id from public.user_connections where id = %s)', (user_id,))
     records = cursor.fetchall()
     cursor.close()
     return records
     
-def get_chat_partners(username):
-    user_id = get_user_id(username, connection_map['chat_partners'])
-    return get_partners_list(user_id, connection_map['chat_partners'])
+def get_chat_partners(username, connection):
+    user_id = get_user_id(username, connection)
+    return get_partners_list(user_id, connection)
 
 def render_user_page(request, chat_partners):
     # request.path should be the full user home page url
@@ -73,6 +86,36 @@ def render_user_page(request, chat_partners):
     # XSS defeating filter if I had the time.
     return user_home_page.replace('{{chat_partners}}', link_collation)
 
+def has_history(username, other_username, connection):
+    # To speed this function up, move the get user id logic into the SQL statement.
+    user_id = get_user_id(username, connection)
+    other_user_id = get_user_id(other_username, connection)
+    cursor = connection.cursor()
+    cursor.execute('select * from public.user_connections where id = %s and \
+        second_id  = %s', (user_id, other_user_id))
+    results = cursor.fetchall()
+    cursor.close()
+    return results
+
+def add_history(username, other_username, connection):
+    # Again, to speed this up, move this logic into the sql block that uses it.
+    user_id = get_user_id(username, connection)
+    other_user_id = get_user_id(other_username, connection)
+    cursor = connection.cursor()
+    cursor.execute('insert into public.chat_log (chat_text) VALUES ("")')
+    connection.commit()
+    cursor.execute('select id from chat_log where chat_text = ""')
+    new_chat_id = cursor.fetchall()[0]
+
+    cursor.execute('insert into public.user_connections \
+        (id,      second_id,     chat_id) VALUES \
+        (%s,      %s,            %s)',
+        (user_id, other_user_id, new_chat_id))
+    connection.commit()
+
+def render_with_history(username, other_username, connection):
+    pass
+    
 @app.route("/")
 def main_page():
     # Return a static HTML page
@@ -87,15 +130,22 @@ def user_page(username):
     # with a generous work factor (naturally, I would include a large, random 
     # salt in the database on a per-user basis)
     try:
-        chat_partners = get_chat_partners(username)
+        chat_partners = get_chat_partners(username, connection_map['chat_partners'])
         return render_user_page(request, chat_partners)
     except:
         traceback.print_exc(file=sys.stdout)
 
 @app.route("/<username>/with/<other_username>")
 def text_page(username, other_username):
-    pass
-
+    try:
+        # has history returns a list.
+        if not has_history(username, other_username, connection_map['get_history']):
+            add_history(username, other_username, connection_map['get_history'])
+        return render_with_history(username, other_username, 
+            connection_map['get_history'])
+    except:
+        traceback.print_exc(file=sys.stdout)
+    
 @app.route("/<username>/with/<other_username>/new")
 def new_messages(username, other_username):
     pass
