@@ -1,4 +1,5 @@
-from flask import Flask
+from __future__ import print_function
+from flask import Flask, request
 
 import traceback
 import psycopg2
@@ -30,13 +31,14 @@ def get_db_connections():
 
 def get_user_id(username, connection):
     cursor = connection.cursor()
-    cursor.execute('Select id from a.users where username = %s', (username,))
+    cursor.execute('Select id from public.users where username = %s', (username,))
     records = cursor.fetchall()
     # This may introduce a race condition, but I'm not sure.
-    if records == None:
+    if not records:
         # This user is new
-        cursor.execute('Insert into a.users (username) VALUES (%s)', (username,))
-        cursor.execute('Select id from a.users where username = %s', (username,))
+        print("Adding user '" + username + "'")
+        cursor.execute('Insert into public.users (username) VALUES (%s)', (username,))
+        cursor.execute('Select id from public.users where username = %s', (username,))
         records = cursor.fetchall()
     # The records method is guaranteed to have at least one id in it now.
     cursor.close()
@@ -44,7 +46,7 @@ def get_user_id(username, connection):
 
 def get_partners_list(user_id, connection):
     cursor = connection.cursor()
-    cursor.execute('select username from a.users where id in (select second_id from a.user_connections where id = %s)', (user_id,))
+    cursor.execute('select username from public.users where id in (select second_id from public.user_connections where id = %s)', (user_id,))
     records = cursor.fetchall()
     cursor.close()
     return records
@@ -86,7 +88,7 @@ def user_page(username):
     # salt in the database on a per-user basis)
     try:
         chat_partners = get_chat_partners(username)
-        return render_user_page(flask.request, chat_partners)
+        return render_user_page(request, chat_partners)
     except:
         traceback.print_exc(file=sys.stdout)
 
