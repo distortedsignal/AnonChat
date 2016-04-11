@@ -24,7 +24,7 @@ Installation Instructions
 * OR
    1. Run the db_setup.sql against the PostgreSQL instance so the database is created and then all objects are created within the database. I'm not sure how to do this, but I feel like it should be possible.
 1. `python app.py`
-1. Using Google Chrome, navigate to http://localhost:5000
+1. Using Google Chrome, navigate to [http://localhost:5000](http://localhost:5000)
 
 ------------
 
