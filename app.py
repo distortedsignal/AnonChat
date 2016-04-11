@@ -192,7 +192,7 @@ def new_messages(username, other_username):
             get_user_id(other_username, connection_map['post_message']), 
             chat_history,
             connection_map['post_message'])
-        return '', 200
+        return ''
     except:
         traceback.print_exc(file=sys.stdout)
 
