@@ -2,16 +2,21 @@
 <html>
     <head>
         <script>
-            var intervId;
-
-            function chatUpdate() {
-                //Every second, call the getChat function
-                intervId = setInterval(getChat, 1000);
-            }
+            var intervId = window.setInterval(getChat, 1000);
 
             function sendChat() {
                 var xhttp = new XMLHttpRequest();
-                xhttp.onreadystatechange = onSendChatReturn(xhttp);
+                // Figure out some way to break this out into a different 
+                // function.
+                xhttp.onreadystatechange = function() {
+                    if (xhttp.status !== 200) {
+                        document.getElementById("error_status").text = "There was a problem communicating with the server.";
+                    } else {
+                        // This should be fixed for latency.
+                        document.getElementById("new_chat").value = "";
+                        document.getElementById("error_status").text = "";
+                    }
+                }
                 xhttp.open("POST", window.location.href + "/new", true);
                 xhttp.send(document.getElementById("new_chat").value);
             }
@@ -19,30 +24,18 @@
             function getChat() {
                 // Get the most recent version of the chat.
                 var xhttp = new XMLHttpRequest();
-                xhttp.onreadystatechange = onGetChatReturn(xhttp);
+                // Figure out some way to break this out into a different 
+                // function.
+                xhttp.onreadystatechange = function() {
+                    if (xhttp.status !== 200) {
+                        document.getElementById("error_status").text = "There was a problem communicating with the server.";
+                    } else {
+                        document.getElementById("chat_area").value = xhttp.responseText;
+                        document.getElementById("error_status").text = "";
+                    }
+                }
                 xhttp.open("GET", window.location.href + "/chat", true);
                 xhttp.send();
-            }
-
-            function onSendChatReturn(xhttp) {
-                if (xhttp.status !== 200) {
-                    document.getElementById("error_status").value =
-                        "There was a problem communicating with the server.";
-                } else {
-                    // This should be fixed for latency.
-                    document.getElementById("new_chat").value = "";
-                    document.getElementById("error_status").value = "";
-                }
-            }
-
-            function onGetChatReturn(xhttp) {
-                if (xhttp.status !== 200) {
-                    document.getElementById("error_status").value =
-                        "There was a problem communicating with the server.";
-                } else {
-                    document.getElementById("chat_area").value = xhttp.responseText;
-                    document.getElementById("error_status").value = "";
-                }
             }
         </script>
     </head>
