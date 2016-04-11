@@ -1,3 +1,31 @@
+AnonChat
+========
+
+Installation Instructions
+-------------------------
+
+### Prerequisites:
+1. Python (2.7 or 3.4+ should work)
+   * pip and virtualenv should be installed
+1. PostgreSQL (not sure which version, I'm working with 9.5.1)
+
+### Installation instructions:
+1. `git clone https://github.com/distortedsignal/AnonChat.git`
+1. `cd AnonChat`
+1. `virtualenv venv`
+1. Start the virtual environment
+   * On Windows, `venv\Scripts\activate`
+   * On Linux or OSX, `./venv/Scripts/activate` (probably? I didn't test this)
+1. `pip install -r requirements.txt`
+* EITHER
+   1. Create a database named AnonChat_db in your PostgreSQL instance
+   2. Run everything from line 11 in the db_setup.sql on to add users, sequences, and tables to the database.
+* OR
+   1. Run the db_setup.sql against the PostgreSQL instance so the database is created and then all objects are created within the database. I'm not sure how to do this, but I feel like it might be possible.
+1. `python app.py`
+
+------------
+
 Instructions for 'AnonChat' take-home interview project
 
 Overview:
