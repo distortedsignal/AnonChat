@@ -38,6 +38,7 @@ def get_db_connections():
     return connection_map
 
 def get_user_id(username, connection):
+    # Non-pure code
     cursor = connection.cursor()
     cursor.execute('Select id from public.users where username = %s',
         (username,))
@@ -99,21 +100,39 @@ def has_history(username, other_username, connection):
 
 def add_history(username, other_username, connection):
     # Again, to speed this up, move this logic into the sql block that uses it.
+    # Very non-pure block of code
     user_id = get_user_id(username, connection)
     other_user_id = get_user_id(other_username, connection)
     cursor = connection.cursor()
-    cursor.execute('insert into public.chat_log (chat_text) VALUES ("")')
+    # This is a terrible way to do this, but I don't want to commit the time to
+    # make it better.
+    cursor.execute('insert into public.chat_log (chat_text) VALUES (\'Start chatting\')')
     connection.commit()
-    cursor.execute('select id from chat_log where chat_text = ""')
+    cursor.execute('select id from public.chat_log where chat_text = \'Start chatting\'')
     new_chat_id = cursor.fetchall()[0]
-
     cursor.execute('insert into public.user_connections \
-        (id,      second_id,     chat_id) VALUES \
-        (%s,      %s,            %s)',
-        (user_id, other_user_id, new_chat_id))
+        (id, second_id, chat_id) VALUES \
+        (%s,      %s,            %s), \
+        (   %s,            %s,      %s)', # The spacing here worked out well-ish
+        (user_id, other_user_id, new_chat_id,
+            other_user_id, user_id, new_chat_id))
     connection.commit()
+    cursor.close()
 
-def render_with_history(username, other_username, connection):
+def get_chat_history(user_id, other_user_id, connection):
+    cursor = connection.cursor()
+    cursor.execute("select chat_text from public.chat_log where id in \
+        (select chat_id from public.user_connections where id = %s and \
+            second_id = %s)", (user_id, other_user_id))
+    text = cursor.fetchall()[0][0]
+    return text
+
+def render_chat_page(username, other_username, connection):
+    user_id = get_user_id(username, connection)
+    other_user_id = get_user_id(other_username, connection)
+    chat_history = get_chat_history(user_id, other_user_id, connection)
+    # Before running this in production, sanatize the chat history string.
+    return chat_page.replace('{{chat_history}}', str(chat_history))
     pass
     
 @app.route("/")
@@ -141,13 +160,17 @@ def text_page(username, other_username):
         # has history returns a list.
         if not has_history(username, other_username, connection_map['get_history']):
             add_history(username, other_username, connection_map['get_history'])
-        return render_with_history(username, other_username, 
+        return render_chat_page(username, other_username, 
             connection_map['get_history'])
     except:
         traceback.print_exc(file=sys.stdout)
     
 @app.route("/<username>/with/<other_username>/new")
 def new_messages(username, other_username):
+    pass
+
+@app.route("/<username>/with/<other_username>/chat")
+def get_chat(username, other_username):
     pass
 
 if __name__ == "__main__":
@@ -157,5 +180,6 @@ if __name__ == "__main__":
     # http://blog.codinghorror.com/the-infinite-space-between-words/
     front_page = open('html_templates\\login.html').read()
     user_home_page = open('html_templates\\user_home_page.html').read()
+    chat_page = open('html_templates\\chat_screen.html').read()
     connection_map = get_db_connections()
     app.run()
