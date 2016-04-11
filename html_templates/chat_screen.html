@@ -2,24 +2,57 @@
 <html>
     <head>
         <script>
+            var intervId;
+
+            function chatUpdate() {
+                //Every second, call the getChat function
+                intervId = setInterval(getChat, 1000);
+            }
+
             function sendChat() {
                 var xhttp = new XMLHttpRequest();
-                xhttp.open("POST", window.location.href + "new", true);
+                xhttp.onreadystatechange = onSendChatReturn(xhttp);
+                xhttp.open("POST", window.location.href + "/new", true);
                 xhttp.send(document.getElementById("new_chat").value);
             }
 
             function getChat() {
+                // Get the most recent version of the chat.
                 var xhttp = new XMLHttpRequest();
-                xhttp.open("GET", window.location.href + chat, false);
+                xhttp.onreadystatechange = onGetChatReturn(xhttp);
+                xhttp.open("GET", window.location.href + "chat", true);
                 xhttp.send();
+            }
+
+            function onSendChatReturn(xhttp) {
+                if (xhttp.status !== 200) {
+                    document.getElementById("error_status").value =
+                        "There was a problem communicating with the server.";
+                } else {
+                    // This should be fixed for latency.
+                    document.getElementById("new_chat").value = "";
+                    document.getElementById("error_status").value = "";
+                }
+            }
+
+            function onGetChatReturn(xhttp) {
+                if (xhttp.status !== 200) {
+                    document.getElementById("error_status").value =
+                        "There was a problem communicating with the server.";
+                } else {
+                    document.getElementById("chat_area").value = xhttp.responseText;
+                    document.getElementById("error_status").value = "";
+                }
             }
         </script>
     </head>
     <body>
         <div id="chat-box" style="text-align:center">
+            <textarea rows="10" cols="80" id="chat_area">{{chat_history}}</textarea>
             <p>Say something:</p>
             <input type="text" name="new_chat" id="new_chat">
             <button type="button" onclick="sendChat()">Send</button>
+            <p id="error_status"></p>
         </div>
     </body>
 </html>
