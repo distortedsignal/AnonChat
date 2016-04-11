@@ -4,6 +4,7 @@ from flask import Flask, request
 import traceback
 import psycopg2
 import sys
+import os
 
 app = Flask(__name__)
 
@@ -211,8 +212,8 @@ if __name__ == "__main__":
     # don't want to have the penalty of "load this file" on every call to the 
     # app. This is mainly driven by the charts in this article:
     # http://blog.codinghorror.com/the-infinite-space-between-words/
-    front_page = open('html_templates\\login.html').read()
-    user_home_page = open('html_templates\\user_home_page.html').read()
-    chat_page = open('html_templates\\chat_screen.html').read()
+    front_page = open('html_templates' + os.sep + 'login.html').read()
+    user_home_page = open('html_templates' + os.sep + 'user_home_page.html').read()
+    chat_page = open('html_templates' + os.sep + 'chat_screen.html').read()
     connection_map = get_db_connections()
     app.run()
