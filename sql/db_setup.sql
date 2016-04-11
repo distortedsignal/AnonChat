@@ -8,6 +8,24 @@ CREATE DATABASE "AnonChat_db"
        LC_CTYPE = 'English_United States.1252'
        CONNECTION LIMIT = -1;
 
+-- Role: chat_partners
+-- DROP ROLE chat_partners;
+CREATE ROLE chat_partners LOGIN
+  ENCRYPTED PASSWORD 'md53d818fbfda07416e02d219959d72aac6'
+  NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;
+
+-- Role: get_history
+-- DROP ROLE get_history;
+CREATE ROLE get_history LOGIN
+  ENCRYPTED PASSWORD 'md5a4ee2fa16a03c45e9d9ef134152aeab6'
+  NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;
+
+-- Role: post_message
+-- DROP ROLE post_message;
+CREATE ROLE post_message LOGIN
+  ENCRYPTED PASSWORD 'md5ee157fbf39fbff6093a96be13c081416'
+  NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;
+
 -- Sequence: public.chat_log_id_seq
 -- DROP SEQUENCE public.chat_log_id_seq;
 CREATE SEQUENCE public.chat_log_id_seq
