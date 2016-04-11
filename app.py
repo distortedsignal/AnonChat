@@ -7,6 +7,8 @@ import sys
 
 app = Flask(__name__)
 
+# TODO change username to user id everywhere
+
 def get_db_connections():
     # Why do we need so many connections? So that we can harshly limit the
     # permissions of each connection. For example, chat partners should only
@@ -79,7 +81,7 @@ def render_user_page(request, chat_partners):
     # the reduce is "concatenate those links together in a string."
     link_collation = ''.join(
         map(
-            lambda x: link_start + x + link_middle + x + link_end, 
+            lambda x: link_start + x[0] + link_middle + x[0] + link_end, 
             chat_partners)
         )
 
@@ -135,6 +137,15 @@ def render_chat_page(username, other_username, connection):
     return chat_page.replace('{{chat_history}}', str(chat_history))
     pass
     
+def add_chat_history(user_id, other_user_id, new_chat, connection):
+    # Again, not pure code.
+    cursor = connection.cursor()
+    cursor.execute('update public.chat_log set chat_text = %s where id in \
+        (select chat_id from public.user_connections where id = %s and \
+            second_id = %s)', (new_chat, user_id, other_user_id))
+    connection.commit()
+    cursor.close()
+
 @app.route("/")
 def main_page():
     # Return a static HTML page
@@ -165,13 +176,34 @@ def text_page(username, other_username):
     except:
         traceback.print_exc(file=sys.stdout)
     
-@app.route("/<username>/with/<other_username>/new")
+@app.route("/<username>/with/<other_username>/new", methods=['POST'])
 def new_messages(username, other_username):
-    pass
+    try:
+        if not has_history(username, other_username, connection_map['post_message']):
+            add_history(username, other_username, connection_map['post_message'])
+        chat_history = get_chat_history(
+            get_user_id(username, connection_map['post_message']), 
+            get_user_id(other_username, connection_map['post_message']), 
+            connection_map['post_message'])
+        # This is a less safe way to do this - figure out some way to do this in SQL
+        chat_history += '\n' + username + ': ' + request.data
+        add_chat_history(
+            get_user_id(username, connection_map['post_message']), 
+            get_user_id(other_username, connection_map['post_message']), 
+            chat_history,
+            connection_map['post_message'])
+        return '', 200
+    except:
+        traceback.print_exc(file=sys.stdout)
 
 @app.route("/<username>/with/<other_username>/chat")
 def get_chat(username, other_username):
-    pass
+    try:
+        user_id = get_user_id(username, connection_map['get_history'])
+        other_user_id = get_user_id(other_username, connection_map['get_history'])
+        return get_chat_history(user_id, other_user_id, connection_map['get_history'])
+    except:
+        traceback.print_exc(file=sys.stdout)
 
 if __name__ == "__main__":
     # I'm opening these files and holding them in program memory because I 
