@@ -127,6 +127,7 @@ def get_chat_history(user_id, other_user_id, connection):
         (select chat_id from public.user_connections where id = %s and \
             second_id = %s)", (user_id, other_user_id))
     text = cursor.fetchall()[0][0]
+    cursor.close()
     return text
 
 def render_chat_page(username, other_username, connection):
