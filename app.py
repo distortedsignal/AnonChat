@@ -188,7 +188,7 @@ def new_messages(username, other_username):
             get_user_id(other_username, connection_map['post_message']), 
             connection_map['post_message'])
         # This is a less safe way to do this - figure out some way to do this in SQL
-        chat_history += '\n' + username + ': ' + request.data
+        chat_history += '\n' + username + ': ' + request.data.decode("utf-8")
         add_chat_history(
             get_user_id(username, connection_map['post_message']), 
             get_user_id(other_username, connection_map['post_message']), 
