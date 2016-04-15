@@ -60,6 +60,10 @@ def get_user_id(username, connection):
     cursor.close()
     return records[0]
 
+def get_two_user_ids(username, other_username, connection):
+    return [get_user_id(username, connection), get_user_id(other_username, 
+        connection)]
+
 def get_partners_list(user_id, connection):
     cursor = connection.cursor()
     cursor.execute('select username from public.users where id in (select \
@@ -148,6 +152,11 @@ def add_chat_history(user_id, other_user_id, new_chat, connection):
     connection.commit()
     cursor.close()
 
+def append_to_chat_history(username, other_username, message, connection):
+    user_id = get_user_id(username, connection)
+    other_user_id = get_user_id(other_username, connection)
+    chat_id = get_chat_id(user_id, other_user_id, connection)
+
 @app.route("/")
 def main_page():
     # Return a static HTML page
@@ -162,7 +171,8 @@ def user_page(username):
     # with a generous work factor (naturally, I would include a large, random 
     # salt in the database on a per-user basis)
     try:
-        chat_partners = get_chat_partners(username, connection_map['chat_partners'])
+        user_id = get_user_id(username, connection_map['chat_partners'])
+        chat_partners = get_partners_list(user_id, connection_map['chat_partners'])
         return render_user_page(request, chat_partners)
     except:
         traceback.print_exc(file=sys.stdout)
@@ -183,6 +193,8 @@ def new_messages(username, other_username):
     try:
         if not has_history(username, other_username, connection_map['post_message']):
             add_history(username, other_username, connection_map['post_message'])
+        append_to_chat_history(username, other_username, request.data,
+            connection_map['post_message'])
         chat_history = get_chat_history(
             get_user_id(username, connection_map['post_message']), 
             get_user_id(other_username, connection_map['post_message']), 
