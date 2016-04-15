@@ -71,10 +71,6 @@ def get_partners_list(user_id, connection):
     records = cursor.fetchall()
     cursor.close()
     return records
-    
-def get_chat_partners(username, connection):
-    user_id = get_user_id(username, connection)
-    return get_partners_list(user_id, connection)
 
 def render_user_page(request, chat_partners):
     # request.path should be the full user home page url
@@ -94,10 +90,8 @@ def render_user_page(request, chat_partners):
     # XSS defeating filter if I had the time.
     return user_home_page.replace('{{chat_partners}}', link_collation)
 
-def has_history(username, other_username, connection):
+def has_history(user_id, other_user_id, connection):
     # To speed this function up, move the get user id logic into the SQL statement.
-    user_id = get_user_id(username, connection)
-    other_user_id = get_user_id(other_username, connection)
     cursor = connection.cursor()
     cursor.execute('select * from public.user_connections where id = %s and \
         second_id  = %s', (user_id, other_user_id))
@@ -105,11 +99,9 @@ def has_history(username, other_username, connection):
     cursor.close()
     return results
 
-def add_history(username, other_username, connection):
+def add_history(user_id, other_user_id, connection):
     # Again, to speed this up, move this logic into the sql block that uses it.
     # Very non-pure block of code
-    user_id = get_user_id(username, connection)
-    other_user_id = get_user_id(other_username, connection)
     cursor = connection.cursor()
     # This is a terrible way to do this, but I don't want to commit the time to
     # make it better.
@@ -135,9 +127,7 @@ def get_chat_history(user_id, other_user_id, connection):
     cursor.close()
     return text
 
-def render_chat_page(username, other_username, connection):
-    user_id = get_user_id(username, connection)
-    other_user_id = get_user_id(other_username, connection)
+def render_chat_page(user_id, other_user_id, connection):
     chat_history = get_chat_history(user_id, other_user_id, connection)
     # Before running this in production, sanatize the chat history string.
     return chat_page.replace('{{chat_history}}', str(chat_history))
@@ -151,11 +141,6 @@ def add_chat_history(user_id, other_user_id, new_chat, connection):
             second_id = %s)', (new_chat, user_id, other_user_id))
     connection.commit()
     cursor.close()
-
-def append_to_chat_history(username, other_username, message, connection):
-    user_id = get_user_id(username, connection)
-    other_user_id = get_user_id(other_username, connection)
-    chat_id = get_chat_id(user_id, other_user_id, connection)
 
 @app.route("/")
 def main_page():
@@ -180,10 +165,13 @@ def user_page(username):
 @app.route("/<username>/with/<other_username>")
 def text_page(username, other_username):
     try:
+        user_id, other_user_id = get_two_user_ids(username, other_username, 
+            connection_map['get_history'])
         # has history returns a list.
-        if not has_history(username, other_username, connection_map['get_history']):
-            add_history(username, other_username, connection_map['get_history'])
-        return render_chat_page(username, other_username, 
+        if not has_history(user_id, other_user_id, 
+                connection_map['get_history']):
+            add_history(user_id, other_user_id, connection_map['get_history'])
+        return render_chat_page(user_id, other_user_id, 
             connection_map['get_history'])
     except:
         traceback.print_exc(file=sys.stdout)
@@ -191,20 +179,16 @@ def text_page(username, other_username):
 @app.route("/<username>/with/<other_username>/new", methods=['POST'])
 def new_messages(username, other_username):
     try:
-        if not has_history(username, other_username, connection_map['post_message']):
-            add_history(username, other_username, connection_map['post_message'])
-        append_to_chat_history(username, other_username, request.data,
+        user_id, other_user_id = get_two_user_ids(username, other_username, 
             connection_map['post_message'])
-        chat_history = get_chat_history(
-            get_user_id(username, connection_map['post_message']), 
-            get_user_id(other_username, connection_map['post_message']), 
+        if not has_history(user_id, other_user_id, 
+                connection_map['post_message']):
+            add_history(user_id, other_user_id, connection_map['post_message'])
+        chat_history = get_chat_history(user_id, other_user_id, 
             connection_map['post_message'])
         # This is a less safe way to do this - figure out some way to do this in SQL
         chat_history += '\n' + username + ': ' + request.data
-        add_chat_history(
-            get_user_id(username, connection_map['post_message']), 
-            get_user_id(other_username, connection_map['post_message']), 
-            chat_history,
+        add_chat_history(user_id, other_user_id, chat_history,
             connection_map['post_message'])
         return ''
     except:
@@ -213,8 +197,8 @@ def new_messages(username, other_username):
 @app.route("/<username>/with/<other_username>/chat")
 def get_chat(username, other_username):
     try:
-        user_id = get_user_id(username, connection_map['get_history'])
-        other_user_id = get_user_id(other_username, connection_map['get_history'])
+        user_id, other_user_id = get_two_user_ids(username, other_username, 
+            connection_map['post_message'])
         return get_chat_history(user_id, other_user_id, connection_map['get_history'])
     except:
         traceback.print_exc(file=sys.stdout)
